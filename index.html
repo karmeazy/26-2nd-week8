@@ -1,0 +1,492 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Zoo | ooZ</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            html, body {
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+            }
+            body {
+                font-family: 'Courier New', monospace;
+                background: #2c2c2c;
+            }
+            button {
+                font: inherit;
+            }
+            main {
+                position: relative;
+                width: 100%;
+                height: 100dvh;
+                overflow: hidden;
+                perspective: 1400px;
+                --bar: 5vh;
+                --half: calc((100dvh - var(--bar))/2);
+            }
+            .flip-stage {
+                position: absolute;
+                inset: 0;
+                transform-origin: center;
+            }
+            .panel {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: var(--half);
+                padding: 0;
+                border: 0;
+                background: transparent;
+                cursor: crosshair;
+                overflow: hidden;
+                text-align: left;
+                color: #b4b4b4;
+                isolation: isolate;
+                outline-offset: -5px;
+            }
+            .panel[data-position="top"] {
+                transform: translateY(0);
+                background: #2c2c2c;
+                color: #b4b4b4;
+            }
+            .panel[data-position="bottom"] {
+                transform: translateY(calc(var(--half) + var(--bar)));
+                background: #b4b4b4;
+                color: #2c2c2c;
+            }
+            .portraits {
+                position: absolute;
+                inset: 0;
+            }
+            .panel[data-position="top"] .portraits {
+                transform: rotate(180deg);
+            }
+            .portrait {
+                position: absolute;
+                width: 9.04vw;
+                height: 9.04vw;
+                object-fit: cover;
+                user-select: none;
+                pointer-events: none;
+                animation: appear 300ms ease both;
+            }
+            .caption {
+                position: absolute;
+                top: 3.8%;
+                left: 4%;
+                width: 92%;
+                font-size: clamp(10px,1.4vw,30px);
+                line-height: 1.25;
+                letter-spacing: .02em;
+                text-align: center;
+                margin: 0;
+                white-space: nowrap;
+                pointer-events: none;
+            }
+            .panel[data-position="top"] .caption {
+                top: 88%;
+                transform: rotate(180deg);
+            }
+            .divider {
+                position: absolute;
+                z-index: 3;
+                top: var(--half);
+                left: 0;
+                width: 100%;
+                height: var(--bar);
+                background: repeating-linear-gradient(90deg,#c700f4 0 2.76vw,#70472b 2.76vw 10.81vw);
+                pointer-events: none;
+            }
+            .ratio {
+                position: absolute;
+                z-index: 4;
+                top: 4.6vh;
+                right: 2.15vw;
+                display: grid;
+                grid-template-columns: repeat(4,1.78vw);
+                gap: 0;
+                pointer-events: none;
+            }
+            .dot {
+                width: 1.78vw;
+                height: 1.78vw;
+                border: 2px solid #ff00db;
+                background: #ff002b;
+                border-radius: 50%;
+                transition: background 450ms,border-color 450ms;
+            }
+            .dot.animal {
+                background: #00ffe4;
+                border-color: #00ff41;
+            }
+            .controls {
+                position: absolute;
+                z-index: 5;
+                right: 2.15vw;
+                top: 18.2vh;
+                display: flex;
+                gap: 12px;
+                color: #b4b4b4;
+                font-size: 11px;
+                align-items: center;
+            }
+            .counter {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .counter input {
+                width: 65px;
+                height: 40px;
+                padding: 0;
+                background: transparent;
+                border: 0;
+                border-bottom: 1px solid transparent;
+                color: inherit;
+                font-family: inherit;
+                font-size: 24px;
+                text-align: center;
+                appearance: textfield;
+            }
+            .counter input:hover,.counter input:focus {
+                border-bottom-color: currentColor;
+                outline: 0;
+            }
+            .counter input::-webkit-inner-spin-button {
+                appearance: none;
+            }
+            .key {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #ff002b;
+            }
+            .key.animal {
+                background: #00ffe4;
+            }
+            .reset {
+                background: none;
+                color: inherit;
+                border: 0;
+                padding: 6px;
+                cursor: pointer;
+                font-size: 30px;
+            }
+            @keyframes appear {
+                from {
+                    opacity: 0;
+                    scale: .88;
+                }
+                to {
+                    opacity: 1;
+                    scale: 1;
+                }
+            }
+            @media(max-width: 600px) {
+                main {
+                    --bar: 4vh;
+                }
+                .portrait {
+                    width: 22vw;
+                    height: 22vw;
+                }
+                .caption {
+                    font-size: clamp(10px,2.7vw,16px);
+                    white-space: normal;
+                    left: 3%;
+                    width: 94%;
+                }
+                .panel[data-position="top"] .caption {
+                    top: 85%;
+                }
+                .ratio {
+                    grid-template-columns: repeat(4,4.5vw);
+                    top: 3vh;
+                    right: 4vw;
+                }
+                .dot {
+                    width: 4.5vw;
+                    height: 4.5vw;
+                }
+                .controls {
+                    top: 14vh;
+                    right: 4vw;
+                    gap: 6px;
+                    font-size: 10px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <div class="flip-stage">
+                <button class="panel" id="human" data-position="bottom">
+                    <div class="portraits"></div>
+                    <p class="caption">Humans gather around anything that moves.</p>
+                </button>
+                <button class="panel" id="animal" data-position="top">
+                    <div class="portraits"></div>
+                    <p class="caption">H#%ans ga&amp;*er ar@!nd an?th$ng th^t m&lt;&gt;es.</p>
+                </button>
+            </div>
+            <div class="divider"></div>
+            <div class="ratio"></div>
+            <div class="controls">
+                <label class="counter">
+                    <span class="key"></span>
+                    <input id="human-count" type="number" min="0" max="99" value="1">
+                </label>
+                <label class="counter">
+                    <span class="key animal"></span>
+                    <input id="animal-count" type="number" min="0" max="99" value="0">
+                </label>
+                <button class="reset" title="초기화">↺</button>
+            </div>
+        </main>
+
+        <script>
+            const images = {
+                human: 'human.png',
+                animal: 'animal.png'
+            };
+
+            const initial = { human: 1, animal: 0 };
+            let counts = { ...initial };
+            let topSpecies = 'animal';
+            let flipping = false;
+            const stage = document.querySelector('.flip-stage');
+
+            const positions = {
+                human: [
+                    [0.596, 0.214], [0.425, 0.344]
+                ],
+                animal: [
+                    [0.243, 0.155], [0.370, 0.155], [0.554, 0.155],
+                    [0.689, 0.212], [0.801, 0.270], [0.153, 0.270],
+                    [0.185, 0.470], [0.314, 0.436], [0.455, 0.304],
+                    [0.518, 0.490], [0.617, 0.400], [0.734, 0.470]
+                ]
+            };
+
+            const panels = {
+                human: document.querySelector('#human'),
+                animal: document.querySelector('#animal')
+            };
+
+            function addPortrait(species, x, y) {
+                const img = document.createElement('img');
+
+                img.src = images[species];
+                img.alt = '';
+                img.draggable = false;
+                img.className = 'portrait';
+
+                if (x !== undefined && y !== undefined) {
+                    img.dataset.x = x;
+                    img.dataset.y = y;
+                    img.style.translate = '-50% -50%';
+                }
+
+                panels[species].querySelector('.portraits').append(img);
+            }
+
+            function layout() {
+                const mobile = innerWidth <= 600;
+
+                for (const species of ['human', 'animal']) {
+                    panels[species].querySelectorAll('img').forEach((img, i) => {
+                        if (img.dataset.x !== undefined) {
+                            img.style.left = `${img.dataset.x * 100}%`;
+                            img.style.top = `${img.dataset.y * 100}%`;
+                            return;
+                        }
+                        let position;
+
+                        if (mobile) {
+                            position = [
+                                0.04 + ((i * 37) % 71) / 100,
+                                0.20 + ((i * 19) % 42) / 100
+                            ];
+                        } else {
+                            position = positions[species][i] || [
+                                0.12 + ((i * 137) % 700) / 1000,
+                                0.16 + ((i * 83) % 410) / 1000
+                            ];
+                        }
+
+                        img.style.left = `${position[0] * 100}%`;
+                        img.style.top = `${position[1] * 100}%`;
+                    });
+                }
+            }
+
+            function scrambleCaptions() {
+                const symbols = '!@#$%^&*<>?/{}[]0123456789';
+
+                document.querySelectorAll('.caption').forEach((caption) => {
+                    if (!caption.dataset.text) {
+                        caption.dataset.text = caption.textContent.trim();
+                    }
+
+                    const text = caption.dataset.text;
+                    const duration = 900;
+                    const interval = 80;
+                    const start = performance.now();
+                    let lastUpdate = -Infinity;
+
+                    cancelAnimationFrame(caption.scrambleFrame);
+
+                    function update(now) {
+                        const progress = Math.min((now - start) / duration, 1);
+
+                        if (progress >= 1) {
+                            caption.textContent = text;
+                            return;
+                        }
+
+                        if (now - lastUpdate >= interval) {
+                            lastUpdate = now;
+
+                            const fixed = Math.floor(progress * text.length);
+
+                            caption.textContent = Array.from(text, (letter, index) => {
+                                if (letter === ' ' || index < fixed) {
+                                    return letter;
+                                }
+
+                                return symbols[
+                                    Math.floor(Math.random() * symbols.length)
+                                ];
+                            }).join('');
+                        }
+
+                        caption.scrambleFrame = requestAnimationFrame(update);
+                    }
+
+                    caption.scrambleFrame = requestAnimationFrame(update);
+                });
+            }
+
+            async function flipPanels(nextTop) {
+                flipping = true;
+                const timing = {
+                    duration: 450,
+                    easing: 'ease-in-out',
+                    fill: 'forwards'
+                };
+
+                const close = stage.animate([
+                    { transform: 'rotateX(0deg)' },
+                    { transform: 'rotateX(90deg)' }
+                ], timing);
+
+                await close.finished;
+                topSpecies = nextTop;
+                render();
+                scrambleCaptions();
+
+                const open = stage.animate([
+                    { transform: 'rotateX(-90deg)' },
+                    { transform: 'rotateX(0deg)' }
+                ], timing);
+
+                close.cancel();
+                await open.finished;
+                open.cancel();
+                flipping = false;
+                render();
+            }
+
+            function render() {
+                const nextTop = counts.human === counts.animal
+                    ? topSpecies
+                    : counts.human < counts.animal ? 'human' : 'animal';
+
+                if (nextTop !== topSpecies && !flipping) {
+                    flipPanels(nextTop);
+                }
+
+                for (const species of ['human', 'animal']) {
+                    const panel = panels[species];
+                    const layer = panel.querySelector('.portraits');
+
+                    panel.dataset.position = species === topSpecies ? 'top' : 'bottom';
+
+                    while (layer.children.length > counts[species]) {
+                        layer.lastChild.remove();
+                    }
+
+                    while (layer.children.length < counts[species]) {
+                        addPortrait(species);
+                    }
+
+                    document.querySelector(`#${species}-count`).value = counts[species];
+                }
+
+                const total = counts.human + counts.animal;
+                const humanDots = total ? Math.round((counts.human / total) * 16) : 0;
+
+                const dots = Array.from({ length: 16 }, (_, i) => {
+                    const dot = document.createElement('span');
+                    dot.className = i >= humanDots ? 'dot animal' : 'dot';
+
+                    if (!total) {
+                        dot.style.opacity = '0.2';
+                    }
+
+                    return dot;
+                });
+
+                document.querySelector('.ratio').replaceChildren(...dots);
+                layout();
+            }
+
+            for (const species of ['human', 'animal']) {
+                panels[species].addEventListener('click', (event) => {
+                    if (flipping || counts[species] >= 99) return;
+
+                    const layer = panels[species].querySelector('.portraits');
+                    const rect = layer.getBoundingClientRect();
+
+                    let x = (event.clientX - rect.left) / rect.width;
+                    let y = (event.clientY - rect.top) / rect.height;
+
+                    if (panels[species].dataset.position === 'top') {
+                        x = 1 - x;
+                        y = 1 - y;
+                    }
+
+                    addPortrait(species, x, y);
+                    counts[species] += 1;
+                    render();
+                });
+
+                document.querySelector(`#${species}-count`).addEventListener('change', (event) => {
+                    const value = Number(event.target.value);
+
+                    if (Number.isFinite(value)) {
+                        counts[species] = Math.max(0, Math.min(99, Math.round(value)));
+                    }
+
+                    render();
+                });
+            }
+
+            document.querySelector('.reset').addEventListener('click', () => {
+                counts = { ...initial };
+                render();
+            });
+
+            window.addEventListener('resize', layout);
+            render();
+            scrambleCaptions();
+        </script>
+    </body>
+</html>
