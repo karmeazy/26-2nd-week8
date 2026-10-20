@@ -47,18 +47,19 @@
                 cursor: crosshair;
                 overflow: hidden;
                 text-align: left;
-                color: #b4b4b4;
+                color: whitesmoke;
                 isolation: isolate;
                 outline-offset: -5px;
+                transition: background-color 0.6s ease, color 0.6s ease;
             }
             .panel[data-position="top"] {
                 transform: translateY(0);
                 background: #2c2c2c;
-                color: #b4b4b4;
+                color: whitesmoke;
             }
             .panel[data-position="bottom"] {
                 transform: translateY(calc(var(--half) + var(--bar)));
-                background: #b4b4b4;
+                background: whitesmoke;
                 color: #2c2c2c;
             }
             .portraits {
@@ -106,13 +107,16 @@
             }
             .ratio {
                 position: absolute;
-                z-index: 4;
+                z-index: 8;
                 top: 4.6vh;
                 right: 2.15vw;
                 display: grid;
                 grid-template-columns: repeat(4,1.78vw);
                 gap: 0;
-                pointer-events: none;
+                pointer-events: auto;
+                cursor: grab;
+                touch-action: none;
+                user-select: none;
             }
             .dot {
                 width: 1.78vw;
@@ -222,6 +226,86 @@
                     font-size: 10px;
                 }
             }
+
+            /* 동점일 때의 배경과 철창 색상 */
+            main.is-equal .panel {
+                background: #ff1e00;
+                color: whitesmoke;
+            }
+
+            main.is-equal .divider {
+                background: repeating-linear-gradient(
+                    90deg,
+                    #2b80ff 0 2.76vw,
+                    #feffd8 2.76vw 10.81vw
+                );
+            }
+
+            main.is-equal .controls {
+                color: #2c2c2c;
+            }
+
+            .ratio.is-dragging {
+                cursor: grabbing;
+            }
+
+            .ratio .dot {
+                pointer-events: none;
+            }
+
+            .corner-navigation {
+                position: absolute;
+                inset: 0;
+                z-index: 7;
+                pointer-events: none;
+                visibility: hidden;
+            }
+
+            main.is-navigating .corner-navigation {
+                visibility: visible;
+            }
+
+            .corner-link {
+                position: absolute;
+                display: grid;
+                place-items: center;
+                width: clamp(90px, 23%, 180px);
+                height: clamp(90px, 20%, 150px);
+                padding: 12px;
+                border: 1px dashed #feffd8;
+                background: rgb(44 44 44 / 80%);
+                color: #feffd8;
+                text-align: center;
+                text-decoration: none;
+                font-size: clamp(11px, 1vw, 15px);
+                transition: background-color 0.15s ease;
+            }
+
+            .corner-link[data-corner="top-left"] {
+                top: 0;
+                left: 0;
+            }
+
+            .corner-link[data-corner="top-right"] {
+                top: 0;
+                right: 0;
+            }
+
+            .corner-link[data-corner="bottom-left"] {
+                bottom: 0;
+                left: 0;
+            }
+
+            .corner-link[data-corner="bottom-right"] {
+                bottom: 0;
+                right: 0;
+            }
+
+            .corner-link.is-target {
+                border-style: solid;
+                background: #2b80ff;
+                color: #ffffff;
+            }
         </style>
     </head>
     <body>
@@ -237,7 +321,15 @@
                 </button>
             </div>
             <div class="divider"></div>
-            <div class="ratio"></div>
+            <div class="ratio" title="모서리로 드래그하여 페이지 이동"></div>
+            <!-- 각 href를 연결할 페이지 주소로 변경하세요. -->
+            <nav class="corner-navigation">
+                <a class="corner-link" data-corner="top-left" href="index2.html">MAIN ↖</a>
+                <a class="corner-link" data-corner="top-right" href="index.html">MIX ↗</a>
+                <a class="corner-link" data-corner="bottom-left" href="index3.html">EXPLORE ↙</a>
+                <a class="corner-link" data-corner="bottom-right" href="about.html">ABOUT ↘</a>
+            </nav>
+
             <div class="controls">
                 <label class="counter">
                     <span class="key"></span>
@@ -261,6 +353,7 @@
             let counts = { ...initial };
             let topSpecies = 'animal';
             let flipping = false;
+
             const stage = document.querySelector('.flip-stage');
 
             const positions = {
@@ -278,6 +371,55 @@
             const panels = {
                 human: document.querySelector('#human'),
                 animal: document.querySelector('#animal')
+            };
+
+            // 하단 대상별 문장 세트
+            // human: 인간 영역의 문장
+            // animal: 동물 영역의 암호 문구
+            const captionSets = {
+                human: [
+                    {
+                        human: 'Do not feed the animals.',
+                        animal: 'D# n%t f&&d th& @n!m@l$.'
+                    },
+                    {
+                        human: 'No flash photography.',
+                        animal: 'N# fl@$h ph#t#gr@phy.'
+                    },
+                    {
+                        human: 'The animals are resting.',
+                        animal: 'Th& @n!m@l$ @r& r&$t!ng.'
+                    },
+                    {
+                        human: 'Stay behind the barrier.',
+                        animal: 'St@y b&h!nd th& b@rr!&r.'
+                    }
+                        
+                ],
+
+                animal: [
+                    {
+                        human: 'Do not feed the humans.',
+                        animal: 'D# n%t f&&d th& h%m@n$.'
+                    },
+                    {
+                        human: 'The humans are resting.',
+                        animal: 'Th& h%m@n$ @r& r&$t!ng.'
+                    },
+                    {
+                        human: 'Keep your distance from the humans.',
+                        animal: 'K&&p y#%r d!$t@nc& fr#m th& h%m@n$.'
+                    },
+                    {
+                        human: 'Humans sometimes tap on the glass to attract attention.',
+                        animal: 'H%m@n$ $#m&t!m&$ t@p #n th& gl@$$ t# @ttr@ct @tt&nt!#n.'
+                    }
+                ]
+            };
+
+            const lastCaptionSet = {
+                human: -1,
+                animal: -1
             };
 
             function addPortrait(species, x, y) {
@@ -307,6 +449,7 @@
                             img.style.top = `${img.dataset.y * 100}%`;
                             return;
                         }
+
                         let position;
 
                         if (mobile) {
@@ -327,15 +470,53 @@
                 }
             }
 
-            function scrambleCaptions() {
-                const symbols = '!@#$%^&*<>?/{}[]0123456789';
+            let captionsWereEqual = false;
+
+            function showEqualCaptions() {
+                const equalTexts = {
+                    human: 'You are being watched.',
+                    animal: 'Y#% @r& b&!ng w@tch&d.'
+                };
 
                 document.querySelectorAll('.caption').forEach((caption) => {
-                    if (!caption.dataset.text) {
-                        caption.dataset.text = caption.textContent.trim();
-                    }
+                    cancelAnimationFrame(caption.scrambleFrame);
 
-                    const text = caption.dataset.text;
+                    const species = caption.closest('.panel').id;
+                    caption.textContent = equalTexts[species];
+                });
+            }
+
+            function scrambleCaptions() {
+                if (counts.human === counts.animal) {
+                    showEqualCaptions();
+                    return;
+                }
+
+                const symbols = '!@#$%^&*<>?/{}[]0123456789';
+
+                // 현재 하단 대상의 목록 선택
+                const bottomSpecies = topSpecies === 'human'
+                    ? 'animal'
+                    : 'human';
+
+                const sets = captionSets[bottomSpecies];
+
+                // 직전에 표시한 세트 제외
+                const available = sets
+                    .map((_, index) => index)
+                    .filter(index => index !== lastCaptionSet[bottomSpecies]);
+
+                const selected = available[
+                    Math.floor(Math.random() * available.length)
+                ];
+
+                lastCaptionSet[bottomSpecies] = selected;
+                const set = sets[selected];
+
+                document.querySelectorAll('.caption').forEach((caption) => {
+                    const species = caption.closest('.panel').id;
+                    const text = set[species];
+
                     const duration = 900;
                     const interval = 80;
                     const start = performance.now();
@@ -376,6 +557,7 @@
 
             async function flipPanels(nextTop) {
                 flipping = true;
+
                 const timing = {
                     duration: 450,
                     easing: 'ease-in-out',
@@ -388,6 +570,7 @@
                 ], timing);
 
                 await close.finished;
+
                 topSpecies = nextTop;
                 render();
                 scrambleCaptions();
@@ -398,7 +581,9 @@
                 ], timing);
 
                 close.cancel();
+
                 await open.finished;
+
                 open.cancel();
                 flipping = false;
                 render();
@@ -417,7 +602,9 @@
                     const panel = panels[species];
                     const layer = panel.querySelector('.portraits');
 
-                    panel.dataset.position = species === topSpecies ? 'top' : 'bottom';
+                    panel.dataset.position = species === topSpecies
+                        ? 'top'
+                        : 'bottom';
 
                     while (layer.children.length > counts[species]) {
                         layer.lastChild.remove();
@@ -431,11 +618,16 @@
                 }
 
                 const total = counts.human + counts.animal;
-                const humanDots = total ? Math.round((counts.human / total) * 16) : 0;
+                const humanDots = total
+                    ? Math.round((counts.human / total) * 16)
+                    : 0;
 
                 const dots = Array.from({ length: 16 }, (_, i) => {
                     const dot = document.createElement('span');
-                    dot.className = i >= humanDots ? 'dot animal' : 'dot';
+
+                    dot.className = i >= humanDots
+                        ? 'dot animal'
+                        : 'dot';
 
                     if (!total) {
                         dot.style.opacity = '0.2';
@@ -446,6 +638,17 @@
 
                 document.querySelector('.ratio').replaceChildren(...dots);
                 layout();
+
+                const equal = counts.human === counts.animal;
+                document.querySelector('main').classList.toggle('is-equal', equal);
+
+                if (equal) {
+                    showEqualCaptions();
+                } else if (captionsWereEqual && !flipping) {
+                    scrambleCaptions();
+                }
+
+                captionsWereEqual = equal;
             }
 
             for (const species of ['human', 'animal']) {
@@ -472,7 +675,10 @@
                     const value = Number(event.target.value);
 
                     if (Number.isFinite(value)) {
-                        counts[species] = Math.max(0, Math.min(99, Math.round(value)));
+                        counts[species] = Math.max(
+                            0,
+                            Math.min(99, Math.round(value))
+                        );
                     }
 
                     render();
@@ -480,11 +686,144 @@
             }
 
             document.querySelector('.reset').addEventListener('click', () => {
+                if (flipping) return;
+
                 counts = { ...initial };
                 render();
+
+                // 플립이 발생하면 flipPanels에서 문구 변경
+                if (!flipping) {
+                    scrambleCaptions();
+                }
             });
 
+            function setupCornerNavigation() {
+                const main = document.querySelector('main');
+                const ratio = document.querySelector('.ratio');
+                const links = Array.from(document.querySelectorAll('.corner-link'));
+                let drag = null;
+
+                function findCorner(x, y) {
+                    const bounds = main.getBoundingClientRect();
+                    const width = Math.min(180, Math.max(90, bounds.width * 0.23));
+                    const height = Math.min(150, Math.max(90, bounds.height * 0.2));
+                    const left = x >= bounds.left && x <= bounds.left + width;
+                    const right = x <= bounds.right && x >= bounds.right - width;
+                    const top = y >= bounds.top && y <= bounds.top + height;
+                    const bottom = y <= bounds.bottom && y >= bounds.bottom - height;
+
+                    if (left && top) return 'top-left';
+                    if (right && top) return 'top-right';
+                    if (left && bottom) return 'bottom-left';
+                    if (right && bottom) return 'bottom-right';
+                    return null;
+                }
+
+                function highlight(corner) {
+                    links.forEach((link) => {
+                        link.classList.toggle('is-target', link.dataset.corner === corner);
+                    });
+                }
+
+                function restore() {
+                    ratio.style.removeProperty('left');
+                    ratio.style.removeProperty('top');
+                    ratio.style.removeProperty('right');
+                    main.classList.remove('is-navigating');
+                    ratio.classList.remove('is-dragging');
+                    highlight(null);
+                }
+
+                ratio.addEventListener('pointerdown', (event) => {
+                    if (!event.isPrimary || event.button !== 0) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const bounds = ratio.getBoundingClientRect();
+                    drag = {
+                        pointerId: event.pointerId,
+                        startX: event.clientX,
+                        startY: event.clientY,
+                        offsetX: event.clientX - bounds.left,
+                        offsetY: event.clientY - bounds.top,
+                        moved: false
+                    };
+
+                    ratio.setPointerCapture(event.pointerId);
+                });
+
+                ratio.addEventListener('pointermove', (event) => {
+                    if (!drag || drag.pointerId !== event.pointerId) return;
+                    event.preventDefault();
+
+                    if (!drag.moved) {
+                        const distance = Math.hypot(
+                            event.clientX - drag.startX,
+                            event.clientY - drag.startY
+                        );
+                        if (distance < 7) return;
+                        drag.moved = true;
+                        main.classList.add('is-navigating');
+                        ratio.classList.add('is-dragging');
+                    }
+
+                    const bounds = main.getBoundingClientRect();
+                    const graphic = ratio.getBoundingClientRect();
+                    const x = Math.max(0, Math.min(
+                        bounds.width - graphic.width,
+                        event.clientX - bounds.left - drag.offsetX
+                    ));
+                    const y = Math.max(0, Math.min(
+                        bounds.height - graphic.height,
+                        event.clientY - bounds.top - drag.offsetY
+                    ));
+
+                    ratio.style.left = `${x}px`;
+                    ratio.style.top = `${y}px`;
+                    ratio.style.right = 'auto';
+                    highlight(findCorner(event.clientX, event.clientY));
+                });
+
+                function finish(event, cancelled = false) {
+                    if (!drag || drag.pointerId !== event.pointerId) return;
+                    const corner = !cancelled && drag.moved
+                        ? findCorner(event.clientX, event.clientY)
+                        : null;
+                    const target = links.find((link) => link.dataset.corner === corner);
+                    const pointerId = drag.pointerId;
+                    drag = null;
+
+                    if (ratio.hasPointerCapture(pointerId)) {
+                        ratio.releasePointerCapture(pointerId);
+                    }
+
+                    restore();
+                    if (target) window.location.assign(target.href);
+                }
+
+                ratio.addEventListener('pointerup', (event) => finish(event));
+                ratio.addEventListener('pointercancel', (event) => finish(event, true));
+                ratio.addEventListener('lostpointercapture', (event) => finish(event, true));
+                ratio.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                });
+                ratio.addEventListener('dragstart', (event) => event.preventDefault());
+
+                window.addEventListener('resize', () => {
+                    if (drag) finish({ pointerId: drag.pointerId }, true);
+                });
+                window.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && drag) {
+                        finish({ pointerId: drag.pointerId }, true);
+                    }
+                });
+            }
+
+            setupCornerNavigation();
+
             window.addEventListener('resize', layout);
+
             render();
             scrambleCaptions();
         </script>
