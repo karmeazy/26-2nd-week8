@@ -4,25 +4,107 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Zoo | ooZ — MAIN</title>
+
     <style>
         * {
             box-sizing: border-box;
         }
+
         html, body {
             margin: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
         }
+
         body {
             font-family: 'Courier New', monospace;
+            background: #dedede;
         }
+
         main {
             position: relative;
             width: 100%;
             height: 100dvh;
             overflow: hidden;
         }
+
+        /* 인물 이미지와 중앙 컬러 띠 */
+        .comparison {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .comparison::after {
+            content: '';
+            position: absolute;
+            z-index: 2;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2.75vw;
+            background: repeating-linear-gradient(
+                180deg,
+                #ffffff 0 4.9vh,
+                #0B7EFB 4.9vh 19.05vh
+            );
+            pointer-events: none;
+        }
+
+        .portrait-panel {
+            position: relative;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .portrait-panel img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        /* 번호 버튼 */
+        .feature-button {
+            position: absolute;
+            left: var(--x);
+            top: var(--y);
+            translate: -50% -50%;
+            display: grid;
+            place-items: center;
+            width: clamp(24px, 2.1vw, 44px);
+            height: clamp(24px, 2.1vw, 44px);
+            padding: 0;
+            border: 1.5px solid #000000;
+            border-radius: 50%;
+            background: #dedede;
+            color: #000000;
+            font-family: 'Times New Roman', serif;
+            font-size: clamp(15px, 1.3vw, 28px);
+            line-height: 1;
+            cursor: pointer;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+
+        .feature-button:hover,
+        .feature-button:focus-visible,
+        .feature-button[aria-pressed="true"] {
+            background: #ff0000;
+            color: #ffffff;
+        }
+
+        .feature-button:focus-visible {
+            outline: 2px solid #ffffff;
+            outline-offset: 3px;
+        }
+
+        /* 모서리 이동용 비율 그래픽 */
         .ratio {
             position: absolute;
             z-index: 8;
@@ -32,14 +114,36 @@
             touch-action: none;
             user-select: none;
         }
-        .ratio[data-corner="top-left"] { top: 4.6vh; left: 2.15vw; }
-        .ratio[data-corner="top-right"] { top: 4.6vh; right: 2.15vw; }
-        .ratio[data-corner="bottom-left"] { bottom: 4.6vh; left: 2.15vw; }
-        .ratio[data-corner="bottom-right"] { bottom: 4.6vh; right: 2.15vw; }
+
+        .ratio[data-corner="top-left"] {
+            top: 4.6vh;
+            left: 2.15vw;
+        }
+
+        .ratio[data-corner="top-right"] {
+            top: 4.6vh;
+            right: 2.15vw;
+        }
+
+        .ratio[data-corner="bottom-left"] {
+            bottom: 4.6vh;
+            left: 2.15vw;
+        }
+
+        .ratio[data-corner="bottom-right"] {
+            bottom: 4.6vh;
+            right: 2.15vw;
+        }
+
         .ratio.is-dragging {
             cursor: grabbing;
             bottom: auto;
         }
+
+        .ratio.is-snapped {
+            transition: left 0.14s ease-out, top 0.14s ease-out;
+        }
+
         .dot {
             width: clamp(18px, 1.78vw, 36px);
             height: clamp(18px, 1.78vw, 36px);
@@ -48,10 +152,13 @@
             border-radius: 50%;
             pointer-events: none;
         }
+
         .dot.animal {
             background: #00ffe4;
             border-color: #00ff41;
         }
+
+        /* 드래그할 때 표시되는 목적지 */
         .corner-navigation {
             position: absolute;
             inset: 0;
@@ -59,9 +166,11 @@
             visibility: hidden;
             pointer-events: none;
         }
+
         main.is-navigating .corner-navigation {
             visibility: visible;
         }
+
         .corner-link {
             position: absolute;
             display: grid;
@@ -77,82 +186,250 @@
             text-decoration: none;
             transition: background-color 0.15s ease;
         }
-        .corner-link[data-corner="top-left"] { top: 0; left: 0; }
-        .corner-link[data-corner="top-right"] { top: 0; right: 0; }
-        .corner-link[data-corner="bottom-left"] { bottom: 0; left: 0; }
-        .corner-link[data-corner="bottom-right"] { bottom: 0; right: 0; }
+
+        .corner-link[data-corner="top-left"] {
+            top: 0;
+            left: 0;
+        }
+
+        .corner-link[data-corner="top-right"] {
+            top: 0;
+            right: 0;
+        }
+
+        .corner-link[data-corner="bottom-left"] {
+            bottom: 0;
+            left: 0;
+        }
+
+        .corner-link[data-corner="bottom-right"] {
+            bottom: 0;
+            right: 0;
+        }
+
         .corner-link.is-target {
             border-style: solid;
             background: #2b80ff;
             color: #ffffff;
         }
+
+        /* 모바일 */
         @media (max-width: 600px) {
             .ratio {
                 grid-template-columns: repeat(4, 4.5vw);
             }
+
             .dot {
                 width: 4.5vw;
                 height: 4.5vw;
             }
+
+            .comparison {
+                overflow-y: auto;
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(2, auto);
+            }
+
+            .portrait-panel {
+                aspect-ratio: 835 / 1114;
+            }
+
+            .comparison::after {
+                display: none;
+            }
+
+            .portrait-panel[data-species="human"]::before {
+                content: '';
+                position: absolute;
+                z-index: 2;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 2.75vw;
+                background: repeating-linear-gradient(
+                    90deg,
+                    #ffffff 0 4.9vw,
+                    #0B7EFB 4.9vw 19.05vw
+                );
+                pointer-events: none;
+            }
+
+            .feature-button {
+                width: 28px;
+                height: 28px;
+                font-size: 17px;
+            }
         }
-        body { background: #2c2c2c; }
     </style>
 </head>
+
 <body>
     <main>
-        <!-- 이 영역에 해당 페이지의 디자인을 추가하세요. -->
-        <div class="ratio" data-corner="top-left" title="모서리로 드래그하여 페이지 이동"></div>
+        <section class="comparison">
+            <!-- 동물 이미지와 번호 버튼 -->
+            <div class="portrait-panel" data-species="animal">
+                <img src="animal.port.png" alt="동물 초상" draggable="false">
+
+                <button class="feature-button" type="button"
+                    data-feature="1" aria-label="동물 1번" aria-pressed="false"
+                    style="--x: 68.6%; --y: 22.9%;">1</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="2" aria-label="동물 2번" aria-pressed="false"
+                    style="--x: 18.9%; --y: 22%;">2</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="3" aria-label="동물 3번" aria-pressed="false"
+                    style="--x: 38.3%; --y: 33.8%;">3</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="4" aria-label="동물 4번" aria-pressed="false"
+                    style="--x: 47.7%; --y: 50%;">4</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="5" aria-label="동물 5번" aria-pressed="false"
+                    style="--x: 66.4%; --y: 58.9%;">5</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="6" aria-label="동물 6번" aria-pressed="false"
+                    style="--x: 14.36%; --y: 67.2%;">6</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="7" aria-label="동물 7번" aria-pressed="false"
+                    style="--x: 65.6%; --y: 86.2%;">7</button>
+            </div>
+
+            <!-- 인간 이미지와 번호 버튼 -->
+            <div class="portrait-panel" data-species="human">
+                <img src="human.port.png" alt="인간 초상" draggable="false">
+
+                <button class="feature-button" type="button"
+                    data-feature="1" aria-label="인간 1번" aria-pressed="false"
+                    style="--x: 73.76%; --y: 12%;">1</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="2" aria-label="인간 2번" aria-pressed="false"
+                    style="--x: 22.52%; --y: 35.59%;">2</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="3" aria-label="인간 3번" aria-pressed="false"
+                    style="--x: 38.64%; --y: 34.2%;">3</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="4" aria-label="인간 4번" aria-pressed="false"
+                    style="--x: 47.73%; --y: 44.79%;">4</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="5" aria-label="인간 5번" aria-pressed="false"
+                    style="--x: 68.18%; --y: 52.78%;">5</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="6" aria-label="인간 6번" aria-pressed="false"
+                    style="--x: 13.22%; --y: 57.73%;">6</button>
+
+                <button class="feature-button" type="button"
+                    data-feature="7" aria-label="인간 7번" aria-pressed="false"
+                    style="--x: 79.24%; --y: 80.47%;">7</button>
+            </div>
+        </section>
+
+        <div class="ratio" data-corner="top-left"
+            title="모서리로 드래그하여 페이지 이동"></div>
+
         <nav class="corner-navigation">
-            <a class="corner-link" data-corner="top-left" href="index2.html">MAIN ↖</a>
-            <a class="corner-link" data-corner="top-right" href="index.html">MIX ↗</a>
-            <a class="corner-link" data-corner="bottom-left" href="index3.html">EXPLORE ↙</a>
-            <a class="corner-link" data-corner="bottom-right" href="about.html">ABOUT ↘</a>
+            <a class="corner-link" data-corner="top-left"
+                href="index2.html">MAIN ↖</a>
+
+            <a class="corner-link" data-corner="top-right"
+                href="index.html">MIX ↗</a>
+
+            <a class="corner-link" data-corner="bottom-left"
+                href="index3.html">EXPLORE ↙</a>
+
+            <a class="corner-link" data-corner="bottom-right"
+                href="about.html">ABOUT ↘</a>
         </nav>
     </main>
+
     <script>
         function setupCornerNavigation() {
             const main = document.querySelector('main');
             const ratio = document.querySelector('.ratio');
-            const links = Array.from(document.querySelectorAll('.corner-link'));
+            const links = Array.from(
+                document.querySelectorAll('.corner-link')
+            );
+
             let drag = null;
 
             function findCorner(x, y) {
                 const bounds = main.getBoundingClientRect();
-                const width = Math.min(180, Math.max(90, bounds.width * 0.23));
-                const height = Math.min(150, Math.max(90, bounds.height * 0.2));
-                const left = x >= bounds.left && x <= bounds.left + width;
-                const right = x <= bounds.right && x >= bounds.right - width;
-                const top = y >= bounds.top && y <= bounds.top + height;
-                const bottom = y <= bounds.bottom && y >= bounds.bottom - height;
+
+                const width = Math.min(
+                    bounds.width * 0.45,
+                    260,
+                    Math.max(120, bounds.width * 0.3)
+                );
+
+                const height = Math.min(
+                    bounds.height * 0.45,
+                    220,
+                    Math.max(120, bounds.height * 0.28)
+                );
+
+                const left =
+                    x >= bounds.left &&
+                    x <= bounds.left + width;
+
+                const right =
+                    x <= bounds.right &&
+                    x >= bounds.right - width;
+
+                const top =
+                    y >= bounds.top &&
+                    y <= bounds.top + height;
+
+                const bottom =
+                    y <= bounds.bottom &&
+                    y >= bounds.bottom - height;
 
                 if (left && top) return 'top-left';
                 if (right && top) return 'top-right';
                 if (left && bottom) return 'bottom-left';
                 if (right && bottom) return 'bottom-right';
+
                 return null;
             }
 
             function highlight(corner) {
                 links.forEach((link) => {
-                    link.classList.toggle('is-target', link.dataset.corner === corner);
+                    link.classList.toggle(
+                        'is-target',
+                        link.dataset.corner === corner
+                    );
                 });
             }
 
             function restore() {
+                ratio.classList.remove('is-snapped');
+
                 ratio.style.removeProperty('left');
                 ratio.style.removeProperty('top');
                 ratio.style.removeProperty('right');
+
                 main.classList.remove('is-navigating');
                 ratio.classList.remove('is-dragging');
+
                 highlight(null);
             }
 
             ratio.addEventListener('pointerdown', (event) => {
                 if (!event.isPrimary || event.button !== 0) return;
+
                 event.preventDefault();
                 event.stopPropagation();
 
                 const bounds = ratio.getBoundingClientRect();
+
                 drag = {
                     pointerId: event.pointerId,
                     startX: event.clientX,
@@ -167,6 +444,7 @@
 
             ratio.addEventListener('pointermove', (event) => {
                 if (!drag || drag.pointerId !== event.pointerId) return;
+
                 event.preventDefault();
 
                 if (!drag.moved) {
@@ -174,11 +452,15 @@
                         event.clientX - drag.startX,
                         event.clientY - drag.startY
                     );
+
                     if (distance < 7) return;
+
                     drag.moved = true;
                     main.classList.add('is-navigating');
+
                     const origin = ratio.getBoundingClientRect();
                     const parent = main.getBoundingClientRect();
+
                     ratio.style.left = `${origin.left - parent.left}px`;
                     ratio.style.top = `${origin.top - parent.top}px`;
                     ratio.style.right = 'auto';
@@ -187,27 +469,64 @@
 
                 const bounds = main.getBoundingClientRect();
                 const graphic = ratio.getBoundingClientRect();
-                const x = Math.max(0, Math.min(
-                    bounds.width - graphic.width,
-                    event.clientX - bounds.left - drag.offsetX
-                ));
-                const y = Math.max(0, Math.min(
-                    bounds.height - graphic.height,
-                    event.clientY - bounds.top - drag.offsetY
-                ));
+
+                let x = Math.max(
+                    0,
+                    Math.min(
+                        bounds.width - graphic.width,
+                        event.clientX - bounds.left - drag.offsetX
+                    )
+                );
+
+                let y = Math.max(
+                    0,
+                    Math.min(
+                        bounds.height - graphic.height,
+                        event.clientY - bounds.top - drag.offsetY
+                    )
+                );
+
+                const corner = findCorner(
+                    event.clientX,
+                    event.clientY
+                );
+
+                ratio.classList.toggle(
+                    'is-snapped',
+                    Boolean(corner)
+                );
+
+                if (corner) {
+                    const marginX = bounds.width * 0.0215;
+                    const marginY = bounds.height * 0.046;
+
+                    x = corner.endsWith('left')
+                        ? marginX
+                        : bounds.width - graphic.width - marginX;
+
+                    y = corner.startsWith('top')
+                        ? marginY
+                        : bounds.height - graphic.height - marginY;
+                }
 
                 ratio.style.left = `${x}px`;
                 ratio.style.top = `${y}px`;
                 ratio.style.right = 'auto';
-                highlight(findCorner(event.clientX, event.clientY));
+
+                highlight(corner);
             });
 
             function finish(event, cancelled = false) {
                 if (!drag || drag.pointerId !== event.pointerId) return;
+
                 const corner = !cancelled && drag.moved
                     ? findCorner(event.clientX, event.clientY)
                     : null;
-                const target = links.find((link) => link.dataset.corner === corner);
+
+                const target = links.find(
+                    (link) => link.dataset.corner === corner
+                );
+
                 const pointerId = drag.pointerId;
                 drag = null;
 
@@ -216,21 +535,39 @@
                 }
 
                 restore();
-                if (target) window.location.assign(target.href);
+
+                if (target) {
+                    window.location.assign(target.href);
+                }
             }
 
-            ratio.addEventListener('pointerup', (event) => finish(event));
-            ratio.addEventListener('pointercancel', (event) => finish(event, true));
-            ratio.addEventListener('lostpointercapture', (event) => finish(event, true));
+            ratio.addEventListener('pointerup', (event) => {
+                finish(event);
+            });
+
+            ratio.addEventListener('pointercancel', (event) => {
+                finish(event, true);
+            });
+
+            ratio.addEventListener('lostpointercapture', (event) => {
+                finish(event, true);
+            });
+
             ratio.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
             });
-            ratio.addEventListener('dragstart', (event) => event.preventDefault());
+
+            ratio.addEventListener('dragstart', (event) => {
+                event.preventDefault();
+            });
 
             window.addEventListener('resize', () => {
-                if (drag) finish({ pointerId: drag.pointerId }, true);
+                if (drag) {
+                    finish({ pointerId: drag.pointerId }, true);
+                }
             });
+
             window.addEventListener('keydown', (event) => {
                 if (event.key === 'Escape' && drag) {
                     finish({ pointerId: drag.pointerId }, true);
@@ -238,20 +575,55 @@
             });
         }
 
+        /* 비율 그래픽 */
         const ratio = document.querySelector('.ratio');
 
-        // 비율 그래픽의 예시 수치입니다. 각 숫자를 변경할 수 있습니다.
-        const counts = { human: 8, animal: 8 };
+        const counts = {
+            human: 8,
+            animal: 8
+        };
+
         const total = counts.human + counts.animal;
-        const humanDots = total ? Math.round(counts.human / total * 16) : 0;
+
+        const humanDots = total
+            ? Math.round(counts.human / total * 16)
+            : 0;
 
         for (let i = 0; i < 16; i++) {
             const dot = document.createElement('span');
-            dot.className = i < humanDots ? 'dot' : 'dot animal';
+
+            dot.className = i < humanDots
+                ? 'dot'
+                : 'dot animal';
+
             ratio.append(dot);
         }
 
         setupCornerNavigation();
+
+        /* 같은 번호의 버튼을 함께 선택 */
+        const featureButtons = document.querySelectorAll(
+            '.feature-button'
+        );
+
+        featureButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const selected =
+                    button.getAttribute('aria-pressed') !== 'true';
+
+                const feature = button.dataset.feature;
+
+                featureButtons.forEach((item) => {
+                    item.setAttribute(
+                        'aria-pressed',
+                        String(
+                            selected &&
+                            item.dataset.feature === feature
+                        )
+                    );
+                });
+            });
+        });
     </script>
 </body>
 </html>
